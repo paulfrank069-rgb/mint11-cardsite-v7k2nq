@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -15,11 +15,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -39,14 +36,36 @@ jobs:
           touch _site/.nojekyll
           test -f _site/index.html
           test -d _site/images
-          ls -la _site | head
-          ls _site/images | wc -l
+          echo "Unpacked images: $(ls _site/images | wc -l)"
 
-      - uses: actions/configure-pages@v5
+      - name: Publish unpacked site to published branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cp -a _site /tmp/_site
+          git checkout --orphan published-tmp
+          git rm -rf --quiet . || true
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+          cp -a /tmp/_site/. .
+          git add -A
+          git commit -m "Publish unpacked site"
+          git branch -M published
+          git push -f origin published
 
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
       - id: deployment
         uses: actions/deploy-pages@v4

@@ -25,7 +25,7 @@ jobs:
           if [ -f pages/index.html ]; then
             cp -a pages/. _site/
           elif [ -d chunks ]; then
-            cat $(ls chunks/chunk-*.txt | sort) | base64 -d > /tmp/site.tar.gz
+            cat $(ls chunks/chunk-*.txt | sort -V) | base64 -d > /tmp/site.tar.gz
             tar -xzf /tmp/site.tar.gz -C _site
           else
             echo "No pages/ or chunks/ payload found" >&2

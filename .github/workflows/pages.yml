@@ -25,7 +25,16 @@ jobs:
           if [ -f pages/index.html ]; then
             cp -a pages/. _site/
           elif [ -d chunks ]; then
-            cat $(ls chunks/chunk-*.txt | sort -V) | base64 -d > /tmp/site.tar.gz
+            n=$(awk -F= '/^chunks=/{print $2}' chunks/MANIFEST.txt)
+            if [ -z "${n}" ]; then
+              echo "chunks/MANIFEST.txt missing chunks= count" >&2
+              exit 1
+            fi
+            files=$(seq -f "chunks/chunk-%02g.txt" 0 $((n-1)))
+            for f in $files; do
+              test -f "$f" || { echo "missing $f" >&2; exit 1; }
+            done
+            cat $files | base64 -d > /tmp/site.tar.gz
             tar -xzf /tmp/site.tar.gz -C _site
           else
             echo "No pages/ or chunks/ payload found" >&2

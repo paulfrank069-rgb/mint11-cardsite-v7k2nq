@@ -1,4 +1,4 @@
 chunks=148
-sha256=9670b3b2451ec3f108475e90886aafe9dfb2e8f3c80ca954fa7b1a1c8b2ba6ae
-bytes=38844927
+sha256=8e47521b71b03d06c309cbffe9392ea054a25d18cad41b2371eed9a0fe5fd7e4
+bytes=38845213
 repo=mint11-cardsite-v7k2nq

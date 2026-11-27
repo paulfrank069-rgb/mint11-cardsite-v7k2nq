@@ -33,6 +33,7 @@ from zoneinfo import ZoneInfo
 from PIL import Image
 
 import needs_photos
+import linkcheck
 
 HERE = Path(__file__).resolve().parent
 CARDS_PATH = HERE / "cards.json"
@@ -847,15 +848,7 @@ def render_card(card: dict, images: list[dict], start_index: int) -> str:
     live_html = f"<p class='live-note'>{e(note)}</p>" if note else ""
     sold_html = render_sold_result(card)
 
-    btn = ""
-    if link:
-        btn = (
-            f"<a class='open-btn' href='{e(link)}' target='_blank' "
-            "rel='noopener noreferrer'>"
-            f"Open listing"
-            f"<span class='open-sub'>{platform + ' · ' if platform else ''}{e(link)}</span>"
-            "</a>"
-        )
+    btn = linkcheck.listing_button_html(card, e)
     hist = ""
     hist_url = alt_sold_history_url(card)
     if hist_url:
@@ -1159,6 +1152,13 @@ a { color: var(--ink); }
   font-weight: 800;
   font-size: 1.05rem;
   box-shadow: 0 4px 0 var(--gold-deep);
+}
+.open-btn-removed {
+  background: #eee;
+  color: var(--ink-soft);
+  box-shadow: none;
+  font-weight: 700;
+  cursor: default;
 }
 .open-sub {
   font-weight: 500;
@@ -2049,6 +2049,13 @@ def build() -> None:
         sys.exit(1)
     selfcheck_errors = centering_selfcheck_gate(cards, open_only=True)
     if selfcheck_errors:
+        sys.exit(1)
+    link_errors = linkcheck.check_cards(cards)
+    if link_errors:
+        for err in link_errors:
+            print(err, file=sys.stderr)
+            print(err)
+        print(f"ERROR: link check failed with {len(link_errors)} dead link(s). Refusing to build.")
         sys.exit(1)
 
     if PAGES_DIR.exists():

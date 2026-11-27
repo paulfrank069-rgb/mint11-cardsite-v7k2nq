@@ -292,6 +292,35 @@ def era_badge_html(card: dict) -> str:
     return f'<span class="badge {cls}">{e(label)}</span>'
 
 
+VENUE_ORDER = ("Fanatics", "Alt", "Goldin", "eBay")
+
+
+def venue_from_url(url: object) -> str | None:
+    """Work the venue out from the listing URL (Fanatics / Alt / Goldin / eBay)."""
+    u = ("" if url is None else str(url)).lower()
+    if "fanaticscollect.com" in u or "fanatics.com" in u:
+        return "Fanatics"
+    if "alt.xyz" in u:
+        return "Alt"
+    if "goldin.co" in u:
+        return "Goldin"
+    if "ebay.com" in u or "ebay." in u:
+        return "eBay"
+    return None
+
+
+def card_venue(card: dict) -> str:
+    return venue_from_url(card.get("link") or "") or "unknown"
+
+
+def venue_badge_html(card: dict) -> str:
+    venue = card_venue(card)
+    if venue == "unknown":
+        return ""
+    cls = "badge-venue-" + venue.lower()
+    return f'<span class="badge badge-venue {cls}">{e(venue)}</span>'
+
+
 def counts(cards: list[dict]) -> dict[str, int]:
     active = [c for c in cards if c.get("status") != "ENDED"]
     out = {
@@ -319,6 +348,19 @@ def counts(cards: list[dict]) -> dict[str, int]:
         )
     out["era-ALL"] = out["ALL"]
     out["era-ALL-ended"] = out["ENDED"]
+    for venue in VENUE_ORDER:
+        out[f"venue-{venue}"] = sum(1 for c in active if card_venue(c) == venue)
+        out[f"venue-{venue}-ended"] = sum(
+            1 for c in cards
+            if c.get("status") == "ENDED" and card_venue(c) == venue
+        )
+    out["venue-ALL"] = out["ALL"]
+    out["venue-ALL-ended"] = out["ENDED"]
+    out["venue-unknown"] = sum(1 for c in active if card_venue(c) == "unknown")
+    out["venue-unknown-ended"] = sum(
+        1 for c in cards
+        if c.get("status") == "ENDED" and card_venue(c) == "unknown"
+    )
     return out
 
 
@@ -828,13 +870,16 @@ def render_card(card: dict, images: list[dict], start_index: int) -> str:
     ended_hidden = " hidden" if (card.get("status") == "ENDED") else ""
     era = card_era(card)
     era_attr = e(era)
+    venue = card_venue(card)
+    venue_attr = e(venue)
     status_badge = status_badge_html(card)
 
     return f"""
-<article class="card" data-status="{status}" data-lane="{lane}" data-era="{era_attr}" id="{e(card.get('id') or '')}"{ended_hidden}>
+<article class="card" data-status="{status}" data-lane="{lane}" data-era="{era_attr}" data-venue="{venue_attr}" id="{e(card.get('id') or '')}"{ended_hidden}>
   <header class="card-head">
     <div class="badges">
       {status_badge}
+      {venue_badge_html(card)}
       <span class="badge badge-lane">Lane {lane}</span>
       {era_badge_html(card)}
       {header_score_pill(card)}
@@ -1087,6 +1132,11 @@ a { color: var(--ink); }
 .badge-era-vintage { background: var(--cream-2); color: var(--ink-soft); border: 1px solid var(--line); letter-spacing: 0.03em; }
 .badge-era-modern { background: #E4EEF2; color: #1F3A5F; border: 1px solid #9BB6C4; letter-spacing: 0.03em; }
 .badge-era-unknown { background: #E8E4DE; color: #3F3A33; border: 1px dashed #C4B9A8; letter-spacing: 0.03em; }
+.badge-venue { letter-spacing: 0.03em; }
+.badge-venue-fanatics { background: #F4D6D6; color: #7A1E12; border: 1px solid #C0392B; }
+.badge-venue-alt { background: #1F1F1F; color: #F2C14E; border: 1px solid #1F1F1F; }
+.badge-venue-goldin { background: #F2E6C8; color: #6B4A10; border: 1px solid #D9A12E; }
+.badge-venue-ebay { background: #D8E4F2; color: #1F3A5F; border: 1px solid #4A6FA5; }
 .card-actions {
   display: flex;
   flex-direction: column;
@@ -1352,9 +1402,11 @@ JS = r"""
   const statusBtns = Array.from(document.querySelectorAll("[data-filter-status]"));
   const laneBtns = Array.from(document.querySelectorAll("[data-filter-lane]"));
   const eraBtns = Array.from(document.querySelectorAll("[data-filter-era]"));
+  const venueBtns = Array.from(document.querySelectorAll("[data-filter-venue]"));
   let status = "ALL";
   let lane = "ALL";
   let era = "ALL";
+  let venue = "ALL";
   const q = document.getElementById("q");
   const qClear = document.getElementById("q-clear");
   const qCount = document.getElementById("q-count");
@@ -1364,13 +1416,16 @@ JS = r"""
     const h2 = card.querySelector(".card-head h2");
     const laneLbl = card.querySelector(".card-meta span");
     const eraLbl = card.querySelector(".badge-era-vintage, .badge-era-modern, .badge-era-unknown");
+    const venueLbl = card.querySelector(".badge-venue");
     card.dataset.search = norm([
       h2 ? h2.textContent : "",
       laneLbl ? laneLbl.textContent : "",
       eraLbl ? eraLbl.textContent : "",
+      venueLbl ? venueLbl.textContent : "",
       card.dataset.status,
       "lane " + card.dataset.lane,
       card.dataset.era || "",
+      card.dataset.venue || "",
     ].join(" "));
   }
 
@@ -1385,10 +1440,11 @@ JS = r"""
         : card.dataset.status === status;
       const okLane = lane === "ALL" || card.dataset.lane === lane;
       const okEra = era === "ALL" || card.dataset.era === era;
+      const okVenue = venue === "ALL" || card.dataset.venue === venue;
       const okText = terms.every((t) => STATUSES.includes(t)
         ? card.dataset.status.toLowerCase() === t
         : card.dataset.search.includes(t));
-      const on = okStatus && okLane && okEra && okText;
+      const on = okStatus && okLane && okEra && okVenue && okText;
       card.hidden = !on;
       if (on) shown += 1;
       else if (okText && terms.length) elsewhere += 1;
@@ -1439,12 +1495,20 @@ JS = r"""
       eraHint.hidden = unknown === 0;
     }
   }
+  function relabelVenues() {
+    for (const btn of venueBtns) {
+      const id = btn.dataset.filterVenue;
+      const n = status === "ENDED" ? btn.dataset.countEnded : btn.dataset.countOpen;
+      const base = id === "ALL" ? "All" : id;
+      btn.textContent = base + " (" + n + ")";
+    }
+  }
   function wire(btns, key, set) {
     for (const btn of btns) {
       btn.addEventListener("click", () => {
         set(btn.dataset[key]);
         for (const b of btns) b.setAttribute("aria-pressed", String(b === btn));
-        if (key === "filterStatus") { relabelLanes(); relabelEras(); }
+        if (key === "filterStatus") { relabelLanes(); relabelEras(); relabelVenues(); }
         apply();
       });
     }
@@ -1452,8 +1516,10 @@ JS = r"""
   wire(statusBtns, "filterStatus", (v) => { status = v; });
   wire(laneBtns, "filterLane", (v) => { lane = v; });
   wire(eraBtns, "filterEra", (v) => { era = v; });
+  wire(venueBtns, "filterVenue", (v) => { venue = v; });
   relabelLanes();
   relabelEras();
+  relabelVenues();
   apply();
 
   const shots = Array.from(document.querySelectorAll(".shot-btn"));
@@ -1551,6 +1617,19 @@ def render_page(
         f"Modern ({c['era-modern']})</button>",
     ]
 
+    venue_btns = [
+        "<button type='button' data-filter-venue='ALL' aria-pressed='true' "
+        f"data-count-open='{c['venue-ALL']}' data-count-ended='{c['venue-ALL-ended']}'>"
+        f"All ({c['venue-ALL']})</button>"
+    ]
+    for venue in VENUE_ORDER:
+        venue_btns.append(
+            f"<button type='button' data-filter-venue='{e(venue)}' aria-pressed='false' "
+            f"data-count-open='{c[f'venue-{venue}']}' "
+            f"data-count-ended='{c[f'venue-{venue}-ended']}'>"
+            f"{e(venue)} ({c[f'venue-{venue}']})</button>"
+        )
+
     disclaimer = e(
         data.get("disclaimer")
         or "CT-verified cards only. Prices are last solds — no max bid."
@@ -1588,12 +1667,14 @@ def render_page(
     <nav class="filters" aria-label="Filter cards">
       <div class="search-wrap" role="search">
         <label for="q" class="sr-only">Search cards</label>
-        <input id="q" type="search" placeholder="Search name, set, #, grade, lane, status, era" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+        <input id="q" type="search" placeholder="Search name, set, #, grade, lane, status, era, venue" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
         <button type="button" class="search-clear" id="q-clear" aria-label="Clear search" hidden>&times;</button>
       </div>
       <p class="search-count" id="q-count" aria-live="polite"></p>
       <p>Status</p>
       <div class="row">{''.join(status_btns)}</div>
+      <p>Venue</p>
+      <div class="row">{''.join(venue_btns)}</div>
       <p>Era</p>
       <div class="row">{''.join(era_btns)}</div>
       <p class="era-hint" id="era-hint" data-unknown-open="{c['era-unknown']}" data-unknown-ended="{c['era-unknown-ended']}" hidden>Cards with no known year show under All only.</p>
@@ -2023,7 +2104,7 @@ def build() -> None:
         np_pages[lid] = f"images/{name}"
     np_html_embed = needs_photos.render_section(np_entries, np_embed)
     np_html_pages = needs_photos.render_section(np_entries, np_pages)
-    print(f"Needs photos (eBay): {len(np_entries)} listed "
+    print(f"Needs photos: {len(np_entries)} listed "
           f"({sum(1 for x in np_entries if not x['_ended'])} live), "
           f"{len(np_pages)} with label-cropped thumbnails")
 

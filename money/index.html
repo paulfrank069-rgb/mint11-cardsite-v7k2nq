@@ -285,6 +285,39 @@ tbody tr:hover { background: var(--lavender-soft); }
   const ESTIMATE_RE = /estimat|\best\b|approx|assum|guess|no (?:recent )?(?:comp|sale)|proxy|placeholder|~\s*\$/i;
   const isEstimate = (note) => ESTIMATE_RE.test(String(note || ""));
 
+  // Where a held card physically is. The inventory has no location column, so it is
+  // read from the free-text evidence_note / notes. Most specific patterns first.
+  const LOCATION_PATTERNS = [
+    /\bin[ -]transit\b(?:\s+(?:via|with|by)?\s*(?:FedEx|UPS|USPS|DHL|EMS|Thailand Post)\b)?/i,
+    /\b(?:at|with)\s+(?:PSA|CGC|BGS|Beckett|SGC|TAG)\b(?:\s+via\s+(?:Fanatics|PWCC|eBay|Alt|Collectors|Goldin|Courtyard)\b)?(?:\s+vault\b)?/i,
+    /\b(?:Fanatics|PWCC|Alt|eBay|Goldin|Courtyard|Collectors|PSA|CGC)\s+Vault\b/i,
+    /\bShip\s?My\s?Cards\b/i,
+    /\bArizona\s+TCG\b/i,
+    /\bDCSports87\b/i,
+    /\b(?:at|in)\s+(?:home|my home|the house|Bangkok|BKK|hand)\b/i,
+    /\blocation\s*[:=]\s*([^;,.\n]{2,40})/i,
+  ];
+  // Normalise casing for the common names so the column sorts and filters cleanly.
+  const LOCATION_CANON = [
+    [/^ship\s?my\s?cards$/i, "ShipMyCards"], [/^arizona\s+tcg$/i, "Arizona TCG"],
+    [/^dcsports87$/i, "DCSports87"], [/^psa\s+vault$/i, "PSA Vault"], [/^fanatics\s+vault$/i, "Fanatics vault"],
+  ];
+  function cardLocation(r) {
+    if (r.location) return maskText(String(r.location).trim());
+    for (const field of ["evidence_note", "notes", "missing"]) {
+      const text = String(r[field] || "");
+      if (!text) continue;
+      for (const re of LOCATION_PATTERNS) {
+        const m = text.match(re);
+        if (!m) continue;
+        let out = (m[1] || m[0]).trim().replace(/\s+/g, " ");
+        for (const [cre, name] of LOCATION_CANON) if (cre.test(out)) { out = name; break; }
+        return maskText(out);
+      }
+    }
+    return "";
+  }
+
   // ---------- generic sortable / searchable table ----------
   // cols: {key, label, num?, get?(row), render?(row), cls?}
   function makeTable(host, { cols, rows, defaultSort, searchLabel, countNoun }) {
@@ -380,8 +413,8 @@ tbody tr:hover { background: var(--lavender-soft); }
         { key: "unrealized_usd", label: "P/L", num: true,
           get: (r) => isNum(r.unrealized_usd) ? r.unrealized_usd : (isNum(r.current_value_usd) && isNum(r.all_in_cost_usd) ? r.current_value_usd - r.all_in_cost_usd : null),
           render: (r) => { const v = isNum(r.unrealized_usd) ? r.unrealized_usd : (isNum(r.current_value_usd) && isNum(r.all_in_cost_usd) ? r.current_value_usd - r.all_in_cost_usd : null); return `<span class="${cls(v)}">${signed(v)}</span>`; } },
-        // The inventory schema has no dedicated location field; fall back to project.
-        { key: "location", label: "Location", cls: "nowrap", get: (r) => maskText(r.location || r.project || "") },
+        { key: "location", label: "Location", cls: "nowrap", get: (r) => cardLocation(r) || null,
+          render: (r) => esc(cardLocation(r) || "—") },
         { key: "bought_on", label: "Bought", cls: "nowrap" },
         { key: "evidence_note", label: "Evidence", cls: "note", get: (r) => maskText(r.evidence_note) },
       ],

@@ -2,7 +2,7 @@ name: Publish site
 
 on:
   push:
-    branches: [main]
+    branches: [era-filter-1127]
   workflow_dispatch:
 
 permissions:
@@ -14,6 +14,8 @@ concurrency:
 
 jobs:
   publish:
+    # Publish only from era-filter-1127 (push or manual run on that branch).
+    if: github.ref == 'refs/heads/era-filter-1127'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

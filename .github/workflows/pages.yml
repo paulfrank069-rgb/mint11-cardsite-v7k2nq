@@ -1,8 +1,8 @@
 name: Publish site
 
+# Publishing moved to era-filter-1127 (its own copy of this workflow publishes the site).
+# On main this workflow never publishes: no push trigger, and the job is skipped on main.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -14,6 +14,7 @@ concurrency:
 
 jobs:
   publish:
+    if: github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

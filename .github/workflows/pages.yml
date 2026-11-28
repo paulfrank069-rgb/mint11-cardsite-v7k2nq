@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pages: write
 
 concurrency:
   group: publish-site
@@ -79,3 +80,27 @@ jobs:
           git commit -m "Publish unpacked site"
           git branch -M published
           git push -f origin published
+
+      - name: Request GitHub Pages build of published
+        # A push made with the workflow token does not reliably start a Pages
+        # build, so ask for one explicitly and wait for it to finish.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          echo "Pages config:"
+          gh api "repos/$REPO/pages" --jq '{status, build_type, source, html_url}' || true
+          sha=$(git rev-parse published)
+          echo "published head: $sha"
+          gh api -X POST "repos/$REPO/pages/builds" --jq '{status, url}'
+          for i in $(seq 1 40); do
+            sleep 15
+            b=$(gh api "repos/$REPO/pages/builds/latest")
+            st=$(jq -r .status <<<"$b"); bsha=$(jq -r .commit <<<"$b")
+            echo "[$i] latest build: status=$st commit=$bsha error=$(jq -r '.error.message // ""' <<<"$b")"
+            if [ "$bsha" = "$sha" ] && [ "$st" = "built" ]; then echo "Pages build succeeded for $sha"; exit 0; fi
+            if [ "$bsha" = "$sha" ] && [ "$st" = "errored" ]; then echo "Pages build errored for $sha" >&2; exit 1; fi
+          done
+          echo "Pages build for $sha did not finish in time" >&2
+          exit 1

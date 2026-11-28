@@ -40,6 +40,9 @@ CARDS_PATH = HERE / "cards.json"
 OUT_PATH = HERE / "index.html"
 PAGES_DIR = HERE / "pages"
 PAGES_IMG = PAGES_DIR / "images"
+# Static extras copied as-is into pages/ (the password-protected Money page and
+# its encrypted data file). Plaintext money data never goes in the repo.
+STATIC_EXTRAS = ("money", "data")
 MAX_WIDTH = 1400
 JPEG_QUALITY = 80
 ICT = ZoneInfo("Asia/Bangkok")
@@ -942,6 +945,15 @@ a { color: var(--ink); }
   padding: 1.4rem 0 1rem;
   border-bottom: 2px solid var(--gold);
 }
+.site-nav { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0 0 0.8rem; }
+.site-nav a {
+  display: inline-flex; align-items: center; min-height: 40px;
+  padding: 0.3rem 0.9rem; border-radius: 999px;
+  border: 1px solid var(--champagne); background: var(--panel);
+  text-decoration: none; font-weight: 600; font-size: 0.92rem;
+}
+.site-nav a[aria-current="page"] { background: var(--ink); color: var(--cream); border-color: var(--ink); }
+.site-nav a:focus-visible { outline: 3px solid var(--gold-2); outline-offset: 2px; }
 .eyebrow {
   margin: 0 0 0.3rem;
   letter-spacing: 0.16em;
@@ -1648,6 +1660,10 @@ def render_page(
 <body>
   <div class="wrap">
     <header class="site-header">
+      <nav class="site-nav" aria-label="Site">
+        <a href="./" aria-current="page">Cards</a>
+        <a href="money/">Money</a>
+      </nav>
       <p class="eyebrow">Mint 11 Hobby Hub</p>
       <h1>Mint 11 – Verified Cards</h1>
       <p class="updated">Last updated {e(built)}</p>
@@ -2135,6 +2151,10 @@ def build() -> None:
         encoding="utf-8",
     )
     (PAGES_DIR / ".nojekyll").write_text("", encoding="utf-8")
+    for extra in STATIC_EXTRAS:
+        src = HERE / extra
+        if src.is_dir():
+            shutil.copytree(src, PAGES_DIR / extra, dirs_exist_ok=True)
 
     size = OUT_PATH.stat().st_size
     pages_size = pages_index.stat().st_size

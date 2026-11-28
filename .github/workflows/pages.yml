@@ -36,6 +36,33 @@ jobs:
           test -d _site/images
           echo "Unpacked images: $(ls _site/images | wc -l)"
 
+      - name: Add Money page
+        run: |
+          set -euo pipefail
+          # Password-protected page + encrypted data (never plaintext).
+          mkdir -p _site/money _site/data
+          cp -a money/. _site/money/
+          cp data/money.enc.json _site/data/money.enc.json
+          test -f _site/money/index.html
+          # Older packed builds have no site nav; add the Money link if missing.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("_site/index.html")
+          s = p.read_text(encoding="utf-8")
+          if 'href="money/"' not in s:
+              css = (".site-nav{display:flex;gap:.4rem;flex-wrap:wrap;margin:0 0 .8rem}"
+                     ".site-nav a{display:inline-flex;align-items:center;min-height:40px;padding:.3rem .9rem;"
+                     "border-radius:999px;border:1px solid var(--champagne);background:var(--panel);"
+                     "text-decoration:none;font-weight:600;font-size:.92rem}"
+                     ".site-nav a[aria-current=page]{background:var(--ink);color:var(--cream);border-color:var(--ink)}")
+              nav = ('<header class="site-header">\n      <nav class="site-nav" aria-label="Site">'
+                     '<a href="./" aria-current="page">Cards</a> <a href="money/">Money</a></nav>')
+              assert '<header class="site-header">' in s and "</style>" in s
+              s = s.replace("</style>", css + "</style>", 1).replace('<header class="site-header">', nav, 1)
+              p.write_text(s, encoding="utf-8")
+              print("Injected Money nav link")
+          PY
+
       - name: Publish unpacked site to published branch
         run: |
           set -euo pipefail

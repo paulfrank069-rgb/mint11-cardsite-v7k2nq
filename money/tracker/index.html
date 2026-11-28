@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#F8F1E4">
+  <meta name="color-scheme" content="light">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>Mint 11 – Owned Cards Tracker</title>
+  <style>
+:root {
+  --cream: #F8F1E4;
+  --cream-2: #F3E6D0;
+  --cream-3: #FFF8EE;
+  --champagne: #EAD7B4;
+  --panel: #FBF3E6;
+  --gold: #D9A12E;
+  --gold-2: #F2C14E;
+  --gold-deep: #A87818;
+  --gold-dark: #7A5610;
+  --lavender: #C9B5EC;
+  --lavender-soft: #E9DEFB;
+  --lavender-ink: #5B4590;
+  --ink: #2E1A47;
+  --ink-soft: #4A3563;
+  --muted: #6E5E7B;
+  --line: #E0C98A;
+  --gain: #3B7350;
+  --loss: #9C4545;
+  --shadow: 0 10px 30px rgba(46, 26, 71, 0.07);
+  --radius: 18px;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+  --serif: Palatino, "Palatino Linotype", "Iowan Old Style", "Times New Roman", serif;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; min-height: 100vh; color: var(--ink);
+  background:
+    radial-gradient(1100px 480px at 8% -12%, #E9DEFB 0%, transparent 55%),
+    radial-gradient(900px 400px at 110% 0%, #F2C14E2a 0%, transparent 50%),
+    var(--cream);
+  font-family: "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+  font-size: 17px; line-height: 1.6;
+}
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+:focus-visible { outline: 3px solid var(--gold-2); outline-offset: 2px; }
+button, input { font: inherit; }
+.wrap { width: min(960px, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0 4rem; }
+.num { font-variant-numeric: tabular-nums; }
+.gain { color: var(--gain); }
+.loss { color: var(--loss); }
+
+/* header */
+.site-nav { display: flex; gap: .4rem; flex-wrap: wrap; margin: 0 0 1rem; }
+.site-nav a {
+  display: inline-flex; align-items: center; min-height: 40px; padding: .25rem .9rem; border-radius: 999px;
+  border: 1px solid var(--champagne); background: var(--panel); color: var(--ink);
+  text-decoration: none; font-weight: 600; font-size: .9rem; transition: border-color .2s, color .2s;
+}
+.site-nav a:hover { border-color: var(--gold-deep); color: var(--gold-dark); }
+.site-nav a[aria-current="page"] { background: var(--ink); color: var(--cream); border-color: var(--ink); }
+header.top { padding: .6rem 0 1.2rem; border-bottom: 1px solid var(--gold); }
+.head-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap; }
+.eyebrow { margin: 0 0 .25rem; letter-spacing: .16em; text-transform: uppercase; font-size: .72rem; color: var(--gold-deep); font-weight: 700; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; color: var(--gold-dark); }
+h1 { margin: 0; font-size: clamp(1.7rem, 5vw, 2.4rem); line-height: 1.15; letter-spacing: -.01em; }
+.quiet { margin: .45rem 0 0; color: var(--muted); font-size: .92rem; }
+.quiet span + span::before { content: "·"; margin: 0 .45rem; color: var(--champagne); }
+.btn {
+  min-height: 42px; padding: .3rem 1rem; border-radius: 999px; border: 1px solid var(--champagne);
+  background: var(--panel); color: var(--ink); font-weight: 600; cursor: pointer; transition: border-color .2s, color .2s;
+}
+.btn:hover { border-color: var(--gold-deep); color: var(--gold-dark); }
+
+/* lock */
+.lock { display: grid; place-items: center; padding: 3rem 0 1rem; }
+.lock-card {
+  width: min(400px, 100%); background: linear-gradient(160deg, var(--cream-3), var(--panel) 60%, var(--cream-2));
+  border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); padding: 1.8rem 1.4rem 1.5rem; text-align: center;
+}
+.lock-card h2 { margin: 0 0 .2rem; font-size: 1.5rem; }
+.lock-card p { margin: 0 0 1.2rem; color: var(--muted); font-size: .92rem; }
+.lock-card form { display: grid; gap: .7rem; }
+.lock-card input {
+  width: 100%; min-height: 50px; padding: .5rem 1rem; border-radius: 999px; border: 1px solid var(--champagne);
+  background: var(--cream-3); color: var(--ink); font-size: 16px;
+}
+.lock-card input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 4px rgba(242,193,78,.22); }
+.unlock { min-height: 50px; border: 0; border-radius: 999px; background: var(--ink); color: var(--cream); font-weight: 700; cursor: pointer; }
+.unlock:disabled { opacity: .65; cursor: progress; }
+.err { margin: 0; padding: .5rem .8rem; border-radius: 12px; background: #F4DCDC; color: var(--loss); font-weight: 600; font-size: .9rem; }
+.busy { margin: 0; color: var(--muted); font-size: .88rem; display: flex; gap: .5rem; justify-content: center; align-items: center; }
+.spin { width: 15px; height: 15px; border-radius: 50%; border: 2px solid var(--champagne); border-top-color: var(--gold-deep); animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+#app { opacity: 0; transition: opacity .5s var(--ease); }
+#app.shown { opacity: 1; }
+
+/* summary */
+.summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.8rem 0 0; }
+.sum {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 1.1rem 1.2rem 1.15rem;
+}
+.sum .k { margin: 0; font-size: .74rem; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-deep); font-weight: 700; }
+.sum .v { margin: .35rem 0 0; font-size: 1.55rem; font-weight: 700; line-height: 1.2; }
+.sum .thb { margin: .1rem 0 0; color: var(--ink-soft); font-size: .95rem; }
+.sum .lbl { margin: .35rem 0 0; color: var(--muted); font-size: .8rem; line-height: 1.4; }
+.sum .small { margin: .8rem 0 0; padding-top: .7rem; border-top: 1px solid var(--champagne); display: grid; gap: .35rem; font-size: .84rem; color: var(--ink-soft); }
+.sum .small div { display: flex; justify-content: space-between; gap: .6rem; }
+.sum .small b { font-weight: 700; white-space: nowrap; }
+
+/* list */
+h2.sec { margin: 2.4rem 0 .2rem; font-size: 1.35rem; }
+.sec-sub { margin: 0 0 1rem; color: var(--muted); font-size: .9rem; }
+.list { border-top: 1px solid var(--gold); }
+.lhead, .row-btn {
+  display: grid; grid-template-columns: minmax(0, 2.3fr) minmax(0, 1.6fr) minmax(0, .9fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 22px;
+  gap: .9rem; align-items: start;
+}
+.lhead { padding: .6rem .3rem; font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 700; border-bottom: 1px solid var(--champagne); }
+.lhead .r, .row-btn .r { text-align: right; }
+.item { border-bottom: 1px solid var(--champagne); }
+.row-btn {
+  width: 100%; padding: 1rem .3rem; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer;
+  border-radius: 12px; transition: background .2s;
+}
+.row-btn:hover { background: rgba(233, 222, 251, .45); }
+.item.open .row-btn { background: rgba(233, 222, 251, .55); }
+.name { font-weight: 700; line-height: 1.35; }
+.rr { display: inline-flex; align-items: center; gap: .3rem; margin-top: .3rem; padding: .05rem .55rem; border-radius: 999px; background: var(--lavender-soft); color: var(--lavender-ink); font-size: .78rem; font-weight: 600; }
+.plan { color: var(--ink-soft); font-size: .9rem; line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.call { font-weight: 600; white-space: nowrap; }
+.sub2 { display: block; color: var(--muted); font-size: .8rem; font-weight: 400; }
+.cue {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; margin-top: .1rem;
+  background: var(--lavender-soft); color: var(--lavender-ink); transition: transform .3s var(--ease), background .2s;
+}
+.cue svg { width: 12px; height: 12px; }
+.item.open .cue { transform: rotate(180deg); background: var(--lavender); }
+.ml { display: none; }
+.totals { display: grid; grid-template-columns: minmax(0, 2.3fr) minmax(0, 1.6fr) minmax(0, .9fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 22px; gap: .9rem; padding: 1rem .3rem; border-top: 2px solid var(--gold); font-weight: 700; }
+.totals .r { text-align: right; }
+
+/* panel */
+.panel-wrap { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .35s var(--ease); }
+.item.open .panel-wrap { grid-template-rows: 1fr; }
+.panel-inner { overflow: hidden; }
+.panel { padding: .4rem .3rem 1.8rem; display: grid; gap: 1.6rem; }
+.panel h3 { margin: 0 0 .5rem; font-size: 1.05rem; }
+.full { color: var(--muted); font-size: .88rem; margin: 0; }
+.kv { display: grid; gap: .25rem; margin: 0; font-size: .94rem; }
+.kv div { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: .6rem; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; }
+.lines { list-style: none; margin: 0; padding: 0; }
+.lines li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .2rem 1rem; padding: .55rem 0; border-bottom: 1px dashed var(--champagne); }
+.lines li:last-child { border-bottom: 0; }
+.lines .it { font-weight: 600; }
+.lines .amt { text-align: right; white-space: nowrap; }
+.lines .basis { grid-column: 1 / -1; color: var(--muted); font-size: .84rem; }
+.lines li.excl { color: var(--muted); }
+.lines li.excl .it, .lines li.excl .amt { opacity: .7; }
+.lines li.tot { border-top: 1px solid var(--gold); border-bottom: 0; font-weight: 700; padding-top: .7rem; }
+.nit { display: inline-block; margin-left: .35rem; font-size: .72rem; font-style: italic; color: var(--muted); font-weight: 400; }
+.chip {
+  display: inline-block; margin-left: .35rem; padding: 0 .5rem; border-radius: 999px; background: var(--lavender-soft);
+  color: var(--lavender-ink); font-size: .68rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; vertical-align: 1px; white-space: nowrap;
+}
+.outs { display: grid; gap: .6rem; }
+.out {
+  border: 1px solid var(--champagne); border-radius: 14px; background: var(--cream-3); padding: .7rem .9rem;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .2rem 1rem;
+}
+.out.base { background: transparent; border-style: dashed; }
+.out .o { font-weight: 700; }
+.out .p { text-align: right; font-weight: 700; white-space: nowrap; }
+.out .p small { display: block; font-weight: 600; font-size: .8rem; }
+.out .meta { grid-column: 1 / -1; color: var(--ink-soft); font-size: .86rem; display: flex; flex-wrap: wrap; gap: .15rem 1rem; }
+.out .meta span b { font-weight: 600; color: var(--muted); margin-right: .25rem; }
+.out .note { grid-column: 1 / -1; color: var(--muted); font-size: .82rem; }
+.ev { border-left: 3px solid var(--lavender); padding: .2rem 0 .2rem .9rem; }
+.ev p { margin: .15rem 0; }
+.ev .big { font-size: 1.15rem; font-weight: 700; }
+.tagnote { border: 1px solid var(--lavender); background: rgba(233, 222, 251, .45); border-radius: 14px; padding: .9rem 1rem; }
+.tagnote h3 { color: var(--lavender-ink); }
+.tagnote p { margin: .2rem 0 .6rem; font-size: .92rem; }
+.comps { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: .9rem; }
+.grade { border: 1px solid var(--champagne); border-radius: 14px; padding: .7rem .9rem; background: var(--cream-3); }
+.grade .gh { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; font-weight: 700; }
+.grade .stat { color: var(--muted); font-size: .8rem; margin: .1rem 0 .4rem; }
+.sales { list-style: none; margin: 0; padding: 0; font-size: .86rem; }
+.sales li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: .6rem; padding: .25rem 0; border-top: 1px dashed var(--champagne); }
+.sales .d { color: var(--ink-soft); white-space: nowrap; }
+.sales .vn { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sales .pr { font-weight: 600; text-align: right; white-space: nowrap; }
+.realres { color: var(--muted); font-size: .92rem; }
+.realres .slot { display: inline-block; min-width: 8rem; border-bottom: 1px dashed var(--lavender); }
+.notes { margin: 2.6rem 0 0; padding-top: 1rem; border-top: 1px solid var(--gold); }
+.notes h2 { margin: 0 0 .5rem; font-size: 1.05rem; }
+.notes ul { margin: 0; padding-left: 1.1rem; color: var(--ink-soft); font-size: .84rem; display: grid; gap: .3rem; }
+footer { margin-top: 2rem; color: var(--muted); font-size: .8rem; }
+
+@media (max-width: 760px) {
+  body { font-size: 16px; }
+  .summary { grid-template-columns: minmax(0, 1fr); }
+  .lhead { display: none; }
+  .row-btn {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 22px; gap: .5rem .9rem; padding: 1rem .5rem;
+  }
+  .row-btn .c-name { grid-column: 1 / 3; }
+  .row-btn .c-cue { grid-column: 3; grid-row: 1; }
+  .row-btn .c-plan { grid-column: 1 / -1; }
+  .row-btn .c-call { grid-column: 1; }
+  .row-btn .c-cost { grid-column: 2; }
+  .row-btn .c-pnl { grid-column: 1; }
+  .row-btn .c-ev { grid-column: 2; }
+  .row-btn .r { text-align: left; }
+  .ml { display: block; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .totals { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .5rem .9rem; padding: 1rem .5rem; }
+  .totals .t-label { grid-column: 1 / -1; }
+  .totals .t-gap { display: none; }
+  .totals .r { text-align: left; }
+  .panel { padding: .3rem .5rem 1.6rem; }
+  .kv div { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <nav class="site-nav" aria-label="Site">
+        <a href="../../">Cards</a>
+        <a href="../">Money</a>
+        <a href="./" aria-current="page">Tracker</a>
+      </nav>
+      <div class="head-row">
+        <div>
+          <p class="eyebrow">Mint 11 Hobby Hub</p>
+          <h1 id="title">Owned cards tracker</h1>
+          <p class="quiet" id="meta">Private. Unlock with the Money password to view.</p>
+          <p class="quiet" id="rule" hidden></p>
+        </div>
+        <button type="button" class="btn" id="lock-btn" hidden>Lock</button>
+      </div>
+    </header>
+
+    <section class="lock" id="lock-view" aria-labelledby="lock-h">
+      <div class="lock-card">
+        <h2 id="lock-h">Owned cards</h2>
+        <p>Same password as the Money page. Decrypted only in this tab.</p>
+        <form id="unlock-form" autocomplete="off">
+          <label for="pw" class="sr-only">Password</label>
+          <input id="pw" type="password" placeholder="Password" autocomplete="current-password" required>
+          <button type="submit" class="unlock" id="unlock-btn">Unlock</button>
+          <p class="busy" id="busy" hidden><span class="spin" aria-hidden="true"></span><span id="busy-text">Decrypting…</span></p>
+          <p class="err" id="err" role="alert" hidden></p>
+        </form>
+      </div>
+    </section>
+
+    <main id="app" hidden>
+      <section class="summary" aria-label="Summary" id="summary"></section>
+
+      <h2 class="sec">Cards</h2>
+      <p class="sec-sub">Tap a card for its costs, outcomes, last solds and result.</p>
+      <div class="list" id="list"></div>
+
+      <section class="notes" aria-labelledby="notes-h" id="notes-sec" hidden>
+        <h2 id="notes-h">Notes and gaps</h2>
+        <ul id="notes"></ul>
+      </section>
+    </main>
+
+    <footer><p>A record, regenerated from new encrypted data (<code>money/tracker/tracker.enc.json</code>). Figures are as computed in that data; nothing on this page is live or editable.</p></footer>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+  if (!/\/$|\.html$/.test(location.pathname)) { location.replace(location.pathname + "/" + location.search); return; }
+
+  const DATA_URL = "tracker.enc.json";
+  const SS_KEY = "mint11.tracker.session";
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- crypto: same scheme and flow as /money/ (PBKDF2-SHA256 -> AES-256-GCM) ----------
+  const b64d = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  const b64e = (u8) => { let s = ""; for (const b of u8) s += String.fromCharCode(b); return btoa(s); };
+  async function fetchEnc() {
+    const res = await fetch(DATA_URL, { cache: "no-store" });
+    if (!res.ok) throw new Error("Could not load the data file (HTTP " + res.status + ").");
+    const enc = await res.json();
+    if (enc.v !== 1 || enc.kdf !== "PBKDF2-SHA256") throw new Error("Unsupported data format.");
+    return enc;
+  }
+  async function deriveRawKey(enc, password) {
+    const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+    const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: b64d(enc.salt_b64), iterations: enc.iter }, base, 256);
+    return new Uint8Array(bits);
+  }
+  async function decryptWithRaw(enc, raw) {
+    const key = await crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, false, ["decrypt"]);
+    const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64d(enc.iv_b64) }, key, b64d(enc.ct_b64));
+    return JSON.parse(new TextDecoder().decode(pt));
+  }
+  // Tab-only session key (never the password or the data), bound to this file's salt.
+  const ss = {
+    get() { try { return JSON.parse(sessionStorage.getItem(SS_KEY) || "null"); } catch { return null; } },
+    set(v) { try { sessionStorage.setItem(SS_KEY, JSON.stringify(v)); } catch { /* memory only */ } },
+    clear() { try { sessionStorage.removeItem(SS_KEY); } catch { /* ignore */ } },
+  };
+
+  // ---------- formatting ----------
+  const isNum = (v) => typeof v === "number" && Number.isFinite(v);
+  const usdF = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const thbF = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+  const usd = (v) => isNum(v) ? (v < 0 ? "−" : "") + "$" + usdF.format(Math.abs(v)) : "—";
+  const thb = (v) => isNum(v) ? (v < 0 ? "−" : "") + "฿" + thbF.format(Math.abs(Math.round(v))) : "";
+  const sUsd = (v) => isNum(v) ? (v > 0 ? "+" : "") + usd(v) : "—";
+  const sThb = (v) => isNum(v) ? (v > 0 ? "+" : "") + thb(v) : "";
+  const tone = (v) => isNum(v) && v !== 0 ? (v > 0 ? "gain" : "loss") : "";
+  const pct = (p) => isNum(p) ? ((p <= 1 ? p * 100 : p).toFixed(p <= 1 && p * 100 < 10 ? 1 : 0) + "%") : "";
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  // Never show cert / tracking / item numbers that may sit in free text.
+  const clean = (s) => String(s ?? "")
+    .replace(/\b(cert(?:ificate)?|tracking|track(?:ing)? ?#|item(?: id| #)?)\.?\s*(?:#|no\.?|number)?\s*:?\s*[A-Z0-9-]{5,}/gi, "$1 [hidden]")
+    .replace(/\b\d{8,}\b/g, "[hidden]");
+  const t = (s) => esc(clean(s));
+  const blank = (s) => s == null || String(s).trim() === "";
+  const dateTxt = (s) => {
+    if (blank(s)) return "";
+    const d = new Date(s);
+    return isNaN(d) ? String(s) : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  };
+  const FLAG_RE = /\b(UNVERIFIED|ESTIMATED?|ASSUMED|OLD COMP|PROXY|GUIDE)\b/i;
+  const chip = (txt) => blank(txt) ? "" : `<span class="chip">${esc(String(txt).toUpperCase())}</span>`;
+  const flagChips = (...texts) => {
+    const seen = new Set();
+    for (const x of texts) { const m = String(x || "").match(new RegExp(FLAG_RE, "gi")) || []; m.forEach((f) => seen.add(f.toUpperCase().replace(/^ESTIMATED$/, "ESTIMATE"))); }
+    return [...seen].map(chip).join("");
+  };
+  const cue = `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg>`;
+
+  // "Dark Charizard #4 Team Rocket 1st Ed Holo, PSA 8 (Alt buy-now copy)" -> "Dark Charizard #4 · Alt buy-now copy"
+  function shortName(full) {
+    const s = clean(full).trim();
+    const m = s.match(/^(.*?#\s*\d+[A-Za-z]?)/);
+    const head = m ? m[1].trim() : s.split(",")[0].trim();
+    const paren = s.match(/\(([^()]*)\)\s*$/);
+    const after = s.includes(",") ? s.slice(s.indexOf(",") + 1).replace(/\([^()]*\)\s*$/, "").trim() : "";
+    const tail = paren ? paren[1] : after;
+    return tail ? `${head} · ${tail}` : head;
+  }
+
+  // ---------- render ----------
+  let state = null;
+  function render(D) {
+    state = D;
+    const T = D.totals || {};
+    const cards = Array.isArray(D.cards) ? D.cards : [];
+    if (!blank(D.title)) $("title").textContent = clean(D.title);
+    const meta = [];
+    if (!blank(D.generated)) meta.push(`Generated ${esc(dateTxt(D.generated))}`);
+    if (isNum(T.fx_usd_thb)) meta.push(`FX ${esc(new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(T.fx_usd_thb))} THB/USD${blank(T.fx_note) ? "" : " (" + t(T.fx_note) + ")"}`);
+    $("meta").innerHTML = meta.map((m) => `<span>${m}</span>`).join("");
+    if (!blank(T.payout_rule)) {
+      const first = clean(T.payout_rule).split(/(?<=[.;])\s+/)[0];
+      $("rule").textContent = first; $("rule").title = clean(T.payout_rule); $("rule").hidden = false;
+    }
+
+    // Summary cards
+    const ev = T.ev_case || {}, call = T.call_case || {}, ex = T.call_case_ex_P7 || {};
+    const p7 = cards.find((c) => c.id === "P7");
+    const p7Name = p7 ? shortName(p7.card) : "the dominant card";
+    $("summary").innerHTML = `
+      <div class="sum">
+        <p class="k">Total cost</p>
+        <p class="v num">${usd(T.cost_all_usd)}</p>
+        <p class="thb num">${thb(T.cost_all_thb)}</p>
+        <p class="lbl">all ${cards.length} cards, every cost line in the totals</p>
+      </div>
+      <div class="sum">
+        <p class="k">Expected P&amp;L</p>
+        <p class="v num ${tone(ev.ev_pnl_usd)}">${sUsd(ev.ev_pnl_usd)}</p>
+        <p class="thb num ${tone(ev.ev_pnl_thb)}">${sThb(ev.ev_pnl_thb)}</p>
+        <p class="lbl">EV P&amp;L — probability-weighted, study rates, not a haircut${Array.isArray(ev.cards) ? ` · ${ev.cards.length} card${ev.cards.length === 1 ? "" : "s"} with EV` : ""}</p>
+        <div class="small">
+          <div><span>P&amp;L at our call</span><b class="num ${tone(call.pnl_usd)}">${sUsd(call.pnl_usd)}${isNum(call.pnl_thb) ? ` · ${sThb(call.pnl_thb)}` : ""}</b></div>
+          <div><span>At our call, without ${esc(p7Name)}</span><b class="num ${tone(ex.pnl_usd)}">${sUsd(ex.pnl_usd)}${isNum(ex.pnl_thb) ? ` · ${sThb(ex.pnl_thb)}` : ""}</b></div>
+        </div>
+      </div>
+      <div class="sum">
+        <p class="k">Cards in play</p>
+        <p class="v num">${cards.length}</p>
+        <p class="lbl">in play</p>
+      </div>`;
+
+    // Card list
+    $("list").innerHTML = `
+      <div class="lhead" aria-hidden="true"><span>Card</span><span>Plan</span><span>Our call</span><span class="r">Cost</span><span class="r">P&amp;L at call</span><span class="r">EV</span><span></span></div>
+      ${cards.map(cardItem).join("")}
+      <div class="totals">
+        <span class="t-label">Totals</span><span class="t-gap"></span><span class="t-gap"></span>
+        <span class="r num"><span class="ml">Cost</span>${usd(T.cost_all_usd)}<span class="sub2">${thb(T.cost_all_thb)}</span></span>
+        <span class="r num ${tone(call.pnl_usd)}"><span class="ml">P&amp;L at call</span>${sUsd(call.pnl_usd)}<span class="sub2">${sThb(call.pnl_thb)}</span></span>
+        <span class="r num ${tone(ev.ev_pnl_usd)}"><span class="ml">EV</span>${sUsd(ev.ev_pnl_usd)}<span class="sub2">${sThb(ev.ev_pnl_thb)}</span></span>
+        <span class="t-gap"></span>
+      </div>`;
+
+    const notes = (Array.isArray(D.notes) ? D.notes : []).filter((n) => !blank(n));
+    $("notes").innerHTML = notes.map((n) => `<li>${t(n)}</li>`).join("");
+    $("notes-sec").hidden = !notes.length;
+  }
+
+  function realResult(c) {
+    if (blank(c.real_result)) return "";
+    const rr = clean(c.real_result).trim();
+    const norm = (x) => String(x || "").toLowerCase().replace(/[^a-z0-9.]+/g, " ").trim();
+    const callTxt = norm(c.call_outcome || c.expected_grade);
+    const match = callTxt && (norm(rr).includes(callTxt) || callTxt.includes(norm(rr)));
+    return `<span class="rr">${esc(rr)} <span aria-label="${match ? "matches our call" : "differs from our call"}" title="${match ? "matches our call" : "differs from our call"}">${match ? "✓" : "✕"}</span></span>`;
+  }
+
+  function cardItem(c, i) {
+    const evObj = c.ev || {};
+    const evTxt = isNum(evObj.ev_pnl_usd)
+      ? `<span class="${tone(evObj.ev_pnl_usd)}">${sUsd(evObj.ev_pnl_usd)}</span><span class="sub2">${sThb(evObj.ev_pnl_thb)}</span>`
+      : `<span class="sub2" style="font-size:.88rem">not computed</span>`;
+    const callPnl = isNum(c.call_pnl_usd) ? `<span class="${tone(c.call_pnl_usd)}">${sUsd(c.call_pnl_usd)}</span>` : `<span class="sub2" style="font-size:.88rem">unknown</span>`;
+    const id = "card-" + i;
+    return `<div class="item" data-i="${i}">
+      <button type="button" class="row-btn" aria-expanded="false" aria-controls="${id}">
+        <span class="c-name"><span class="name">${esc(shortName(c.card))}</span>${realResult(c) ? `<br>${realResult(c)}` : ""}</span>
+        <span class="c-plan plan">${t(c.plan)}</span>
+        <span class="c-call call"><span class="ml">Our call</span>${t(c.call_outcome || c.expected_grade || "—")}</span>
+        <span class="c-cost r num"><span class="ml">Cost</span>${usd(c.cost_total_usd)}<span class="sub2">${thb(c.cost_total_thb)}</span></span>
+        <span class="c-pnl r num"><span class="ml">P&amp;L at call</span>${callPnl}</span>
+        <span class="c-ev r num"><span class="ml">EV</span>${evTxt}</span>
+        <span class="c-cue"><span class="cue">${cue}</span></span>
+      </button>
+      <div class="panel-wrap" id="${id}" role="region" aria-label="${esc(shortName(c.card))} details"><div class="panel-inner"><div class="panel"></div></div></div>
+    </div>`;
+  }
+
+  // ---------- expanded panel ----------
+  function costLines(lines, totalUsd, totalThb) {
+    const L = Array.isArray(lines) ? lines : [];
+    if (!L.length && !isNum(totalUsd)) return `<p class="full">No cost lines.</p>`;
+    return `<ul class="lines">${L.map((l) => {
+      const out = l.in_total === false;
+      const thbV = isNum(l.thb) ? l.thb : isNum(l.usd_thb) ? l.usd_thb : isNum(l.cost_thb) ? l.cost_thb : null;
+      return `<li class="${out ? "excl" : ""}">
+        <span class="it">${t(l.item || l.line)}${out ? `<span class="nit">not in total</span>` : ""}${flagChips(l.basis, l.item, l.flag)}</span>
+        <span class="amt num">${usd(l.usd)}${thbV != null ? `<span class="sub2">${thb(thbV)}</span>` : ""}</span>
+        ${blank(l.basis) ? "" : `<span class="basis">${t(l.basis)}</span>`}
+      </li>`;
+    }).join("")}
+      <li class="tot"><span class="it">Total</span><span class="amt num">${usd(totalUsd)}${isNum(totalThb) ? `<span class="sub2">${thb(totalThb)}</span>` : ""}</span></li></ul>`;
+  }
+
+  function outcome(o, base) {
+    if (!o) return "";
+    const pay = o.payout && typeof o.payout === "object" ? o.payout : null;
+    const meta = [];
+    if (isNum(o.probability)) meta.push(`<span><b>Chance</b>${pct(o.probability)}</span>`);
+    meta.push(`<span><b>Sale</b>${isNum(o.sale_usd) ? usd(o.sale_usd) : "unknown"}</span>`);
+    if (pay && !blank(pay.rate_label)) meta.push(`<span><b>Payout</b>${t(pay.rate_label)}</span>`);
+    const net = isNum(o.net_usd) ? o.net_usd : pay && isNum(pay.payout_usd) ? pay.payout_usd : null;
+    meta.push(`<span><b>Net</b>${isNum(net) ? usd(net) : "unknown"}</span>`);
+    return `<div class="out ${base ? "base" : ""}">
+      <span class="o">${base ? "Sell as is, no grading" : t(o.outcome)}${chip(o.flag)}</span>
+      <span class="p num ${tone(o.pnl_usd)}">${isNum(o.pnl_usd) ? sUsd(o.pnl_usd) : `<span style="color:var(--muted);font-weight:600">P&amp;L unknown</span>`}${isNum(o.pnl_thb) ? `<small>${sThb(o.pnl_thb)}</small>` : ""}</span>
+      <span class="meta num">${meta.join("")}</span>
+      ${base && !blank(o.outcome) ? `<span class="note">${t(o.outcome)}</span>` : ""}
+      ${blank(o.note) ? "" : `<span class="note">${t(o.note)}</span>`}
+    </div>`;
+  }
+
+  function evBlock(ev) {
+    if (!ev) return "";
+    const has = isNum(ev.ev_pnl_usd);
+    const r = ev.rates && typeof ev.rates === "object" ? ev.rates : null;
+    const rates = r ? [["10+", r.p10plus], ["9.5", r.p95], ["9", r.p9]].filter(([, v]) => isNum(v)).map(([k, v]) => `${k} ${pct(v)}`).join(" · ") : "";
+    return `<div class="ev">
+      ${blank(ev.label) ? "" : `<p style="font-weight:600">${t(ev.label)}</p>`}
+      ${has ? `<p class="big num ${tone(ev.ev_pnl_usd)}">EV P&amp;L ${sUsd(ev.ev_pnl_usd)}${isNum(ev.ev_pnl_thb) ? ` <span style="font-size:.9rem">· ${sThb(ev.ev_pnl_thb)}</span>` : ""}</p>
+             ${isNum(ev.ev_net_usd) ? `<p class="num">EV net ${usd(ev.ev_net_usd)}</p>` : ""}
+             ${rates ? `<p class="full">Rates: ${esc(rates)}${r && !blank(r.basis) ? " — " + t(r.basis) : ""}</p>` : ""}`
+          : `<p>${blank(ev.breakeven_text) ? "EV not computed." : t(ev.breakeven_text)}</p>`}
+    </div>`;
+  }
+
+  function comps(cmp) {
+    const entries = cmp && typeof cmp === "object" ? Object.entries(cmp) : [];
+    if (!entries.length) return `<p class="full">No last solds recorded.</p>`;
+    return `<div class="comps">${entries.map(([key, g]) => {
+      g = g || {};
+      const grade = g.grade || key.replace(/-/g, " ");
+      let sales = Array.isArray(g.sales) ? g.sales.slice() : [];
+      if (!sales.length) { if (g.last) sales.push(g.last); if (Array.isArray(g.other)) sales.push(...g.other); }
+      sales = sales.filter((s) => s && (isNum(s.price) || !blank(s.date)))
+        .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+      const last = g.last || sales[0] || null;
+      const noRecent = isNum(g.n_30d) ? g.n_30d === 0 : (last && isNum(last.age_days) ? last.age_days > 30 : false);
+      const old = (last && last.old_comp === true) || noRecent;
+      const stat = [];
+      if (isNum(g.n_30d)) stat.push(`${g.n_30d} sale${g.n_30d === 1 ? "" : "s"} in 30 days`);
+      if (isNum(g.median_30d)) stat.push(`median ${usd(g.median_30d)}`);
+      if (isNum(g.low_30d) && isNum(g.high_30d)) stat.push(`range ${usd(g.low_30d)}–${usd(g.high_30d)}`);
+      const guide = isNum(g.guide_usd) ? `<p class="stat">${blank(g.status) ? "" : t(g.status) + " · "}Guide ${usd(g.guide_usd)}${blank(g.guide_date) ? "" : " (" + esc(dateTxt(g.guide_date)) + ")"}${chip("GUIDE")}</p>`
+        : (!blank(g.status) ? `<p class="stat">${t(g.status)}</p>` : "");
+      return `<div class="grade">
+        <div class="gh"><span>${t(grade)}${old ? chip("OLD COMP") : ""}</span></div>
+        ${stat.length ? `<p class="stat num">${stat.join(" · ")}</p>` : ""}${guide}
+        ${sales.length ? `<ul class="sales">${sales.map((s) => `<li class="num"><span class="d">${esc(dateTxt(s.date))}</span><span class="vn">${t(s.venue)}${isNum(s.age_days) ? ` · ${s.age_days} d ago` : ""}</span><span class="pr">${usd(s.price)}</span></li>`).join("")}</ul>` : ""}
+      </div>`;
+    }).join("")}</div>`;
+  }
+
+  function panelHtml(c) {
+    const kv = [];
+    if (!blank(c.status)) kv.push(["Status / location", t(c.status)]);
+    if (!blank(c.expected_grade)) kv.push(["Expected grade", t(c.expected_grade)]);
+    if (!blank(c.psa_equivalent)) kv.push(["PSA equivalent", t(c.psa_equivalent)]);
+    if (!blank(c.plan)) kv.push(["Plan", t(c.plan)]);
+    const outs = (Array.isArray(c.outcomes) ? c.outcomes : []).map((o) => outcome(o, false)).join("");
+    const asIs = c.as_is && typeof c.as_is === "object" ? outcome(c.as_is, true) : "";
+    const pi = c.psa_instead && typeof c.psa_instead === "object" ? c.psa_instead : null;
+    const bePsa = pi && isNum(pi.breakeven_p_psa10) ? `<p class="full">Break-even PSA 10 chance: ${pct(pi.breakeven_p_psa10)}</p>` : "";
+    return `
+      <div>
+        <p class="full">${t(c.card)}</p>
+        <dl class="kv" style="margin-top:.6rem">${kv.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${v}</dd></div>`).join("")}</dl>
+      </div>
+      <div><h3>Cost breakdown</h3>${costLines(c.cost_lines, c.cost_total_usd, c.cost_total_thb)}</div>
+      <div><h3>Outcomes</h3><div class="outs">${outs || `<p class="full">No outcomes recorded.</p>`}${asIs}</div></div>
+      <div><h3>${!isNum((c.ev || {}).ev_pnl_usd) && !blank((c.ev || {}).breakeven_text) ? "Break-even" : "Expected value"}</h3>${evBlock(c.ev)}</div>
+      ${pi ? `<div class="tagnote">
+        <h3>TAG 10 is not a PSA 10</h3>
+        <p>This card is a TAG submission unless Frank decides otherwise.${blank(c.psa_equivalent) ? "" : " " + t(c.psa_equivalent)}</p>
+        ${blank(pi.note) ? "" : `<p>${t(pi.note)}</p>`}
+        <h3 style="font-size:.95rem;margin-top:.8rem">If sent to PSA instead: cost</h3>${costLines(pi.cost_lines, pi.cost_total_usd, pi.cost_total_thb)}
+        <h3 style="font-size:.95rem;margin-top:.9rem">If sent to PSA instead: outcomes</h3>
+        <div class="outs">${(Array.isArray(pi.outcomes) ? pi.outcomes : []).map((o) => outcome(o, false)).join("") || `<p class="full">None recorded.</p>`}</div>
+        ${bePsa}
+      </div>` : ""}
+      <div><h3>Last solds</h3>${comps(c.comps)}</div>
+      <div><h3>Real result</h3><p class="realres">${blank(c.real_result) ? `<span class="slot">&nbsp;</span> <span>to be filled in</span>` : `${esc(clean(c.real_result))} · our call ${t(c.call_outcome || c.expected_grade)}`}</p></div>`;
+  }
+
+  // Accordion: one open at a time; panel built on first open.
+  $("list").addEventListener("click", (ev) => {
+    const btn = ev.target.closest(".row-btn"); if (!btn) return;
+    const item = btn.closest(".item"), open = item.classList.contains("open");
+    $("list").querySelectorAll(".item.open").forEach((x) => { x.classList.remove("open"); x.querySelector(".row-btn").setAttribute("aria-expanded", "false"); });
+    if (!open) {
+      const panel = item.querySelector(".panel");
+      if (!panel.dataset.built) { panel.innerHTML = panelHtml(state.cards[Number(item.dataset.i)]); panel.dataset.built = "1"; }
+      item.classList.add("open"); btn.setAttribute("aria-expanded", "true");
+      setTimeout(() => { const r = item.getBoundingClientRect(); if (r.top < 0 || r.top > innerHeight * 0.6) item.scrollIntoView({ behavior: "smooth", block: "start" }); }, 60);
+    }
+  });
+
+  // ---------- lock / unlock ----------
+  let busy = false;
+  function setBusy(on, text) { busy = on; $("unlock-btn").disabled = on; $("pw").disabled = on; $("busy").hidden = !on; if (text) $("busy-text").textContent = text; }
+  function showError(msg) { $("err").textContent = msg; $("err").hidden = !msg; }
+  function showUnlocked(D) {
+    render(D);
+    $("lock-view").hidden = true; $("app").hidden = false; $("lock-btn").hidden = false;
+    requestAnimationFrame(() => requestAnimationFrame(() => $("app").classList.add("shown")));
+  }
+  function lock() {
+    ss.clear(); state = null;
+    $("app").classList.remove("shown"); $("app").hidden = true; $("lock-btn").hidden = true; $("lock-view").hidden = false;
+    for (const id of ["summary", "list", "notes"]) $(id).textContent = "";
+    $("notes-sec").hidden = true; $("rule").hidden = true; $("rule").textContent = "";
+    $("title").textContent = "Owned cards tracker"; $("meta").textContent = "Private. Unlock with the Money password to view.";
+    $("pw").value = ""; showError(""); $("pw").focus();
+  }
+  async function unlock(password) {
+    if (!window.crypto || !crypto.subtle) { showError("This page needs a secure (https) connection to decrypt."); return; }
+    setBusy(true, "Deriving key… (this takes a second)"); showError("");
+    let raw;
+    try {
+      const enc = await fetchEnc();
+      raw = await deriveRawKey(enc, password);
+      setBusy(true, "Decrypting…");
+      let D;
+      try { D = await decryptWithRaw(enc, raw); }
+      catch { showError("Wrong password. Try again."); return; }
+      ss.set({ salt: enc.salt_b64, k: b64e(raw) });
+      $("pw").value = "";
+      showUnlocked(D);
+    } catch (err) {
+      showError(err && err.message ? err.message : "Could not unlock.");
+    } finally { if (raw) raw.fill(0); setBusy(false); }
+  }
+  async function resume() {
+    const sess = ss.get();
+    if (!sess || !sess.k || !window.crypto || !crypto.subtle) return;
+    setBusy(true, "Unlocking…");
+    try {
+      const enc = await fetchEnc();
+      if (enc.salt_b64 !== sess.salt) { ss.clear(); showError("The data was updated. Enter the password again."); return; }
+      showUnlocked(await decryptWithRaw(enc, b64d(sess.k)));
+    } catch { ss.clear(); } finally { setBusy(false); }
+  }
+  $("unlock-form").addEventListener("submit", (ev) => { ev.preventDefault(); if (busy) return; const pw = $("pw").value; if (pw) unlock(pw); });
+  $("lock-btn").addEventListener("click", lock);
+  resume();
+})();
+</script>
+</body>
+</html>
